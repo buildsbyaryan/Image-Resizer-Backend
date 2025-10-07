@@ -1,58 +1,48 @@
-import express from "express";
 import multer from "multer";
 import sharp from "sharp";
-import cors from "cors";
-import fs from "fs";
+import nc from "next-connect"; // works for Vercel serverless
+import { Readable } from "stream";
 
-const app = express();
-app.use(cors());
-app.use(express.json());
-app.use(express.static("processed")); // serve processed images
+const upload = multer();
 
-// Configure multer (upload destination)
-const upload = multer({ dest: "uploads/" });
+// Helper to convert buffer to stream
+const bufferToStream = (buffer) => {
+  const readable = new Readable();
+  readable._read = () => {}; 
+  readable.push(buffer);
+  readable.push(null);
+  return readable;
+};
 
-// POST route: upload and process image
-app.post("/resize", upload.single("image"), async (req, res) => {
-  try {
-    const { width, height, rotation, flipH, flipV, grayscale, brightness, contrast } = req.body;
+const handler = nc()
+  .use(upload.single("image"))
+  .post(async (req, res) => {
+    try {
+      const { width, height } = req.body;
+      const w = parseInt(width);
+      const h = parseInt(height);
 
-    // Convert form data to usable types
-    const w = parseInt(width);
-    const h = parseInt(height);
-    const rotate = parseInt(rotation) || 0;
-    const isFlipH = flipH === "true";
-    const isFlipV = flipV === "true";
-    const isGray = grayscale === "true";
+      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-    // Input/output paths
-    const inputPath = req.file.path;
-    const outputPath = `processed/resized-${Date.now()}.png`;
+      const outputBuffer = await sharp(req.file.buffer)
+        .resize(w, h)
+        .png()
+        .toBuffer();
 
-    // Process image with sharp
-    let image = sharp(inputPath)
-      .resize(w, h)
-      .rotate(rotate)
-      .modulate({
-        brightness: parseFloat(brightness) / 100 || 1,
-        contrast: parseFloat(contrast) / 100 || 1,
+      const base64Image = outputBuffer.toString("base64");
+      res.status(200).json({
+        success: true,
+        image: `data:image/png;base64,${base64Image}`
       });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ success: false, error: "Image processing failed" });
+    }
+  });
 
-    if (isGray) image = image.grayscale();
-    if (isFlipH) image = image.flip();
-    if (isFlipV) image = image.flop();
-
-    await image.toFile(outputPath);
-
-    // Remove original uploaded file
-    fs.unlinkSync(inputPath);
-
-    // Send processed file URL back to frontend
-    res.json({ success: true, imageUrl: `/${outputPath}` });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: "Image processing failed" });
-  }
-});
-
-app.listen(5000, () => console.log("✅ Server running on http://localhost:5000"));
+export default handler;
+export const config = {
+  api: {
+    bodyParser: false, // Multer handles parsing
+  },
+};
