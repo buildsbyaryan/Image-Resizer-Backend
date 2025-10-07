@@ -4,14 +4,14 @@ import sharp from "sharp";
 import cors from "cors";
 
 const app = express();
-app.use(cors());
+app.use(cors()); // Allow frontend requests
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-// POST /resize
-app.post("/resize", upload.single("image"), async (req, res) => {
+// POST /api/resize
+app.post("/api/resize", upload.single("image"), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).send("No image uploaded");
+    if (!req.file) return res.status(400).json({ success: false, error: "No image uploaded" });
 
     const width = parseInt(req.body.width) || null;
     const height = parseInt(req.body.height) || null;
@@ -21,10 +21,11 @@ app.post("/resize", upload.single("image"), async (req, res) => {
       .png()
       .toBuffer();
 
-    res.type("image/png").send(buffer);
+    const base64Image = buffer.toString("base64");
+    res.json({ success: true, image: `data:image/png;base64,${base64Image}` });
   } catch (err) {
-    console.error(err);
-    res.status(500).send("Error resizing image");
+    console.error("Resize error:", err);
+    res.status(500).json({ success: false, error: "Image processing failed" });
   }
 });
 

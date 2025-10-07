@@ -6,8 +6,8 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 const handler = nc()
   .use(upload.single("image"))
-  
-  // POST endpoint (upload file)
+
+  // POST endpoint: upload a file and resize
   .post(async (req, res) => {
     try {
       if (!req.file) return res.status(400).json({ success: false, error: "No image uploaded" });
@@ -23,12 +23,12 @@ const handler = nc()
       const base64Image = buffer.toString("base64");
       res.status(200).json({ success: true, image: `data:image/png;base64,${base64Image}` });
     } catch (err) {
-      console.error(err);
+      console.error("POST Resize error:", err);
       res.status(500).json({ success: false, error: "Image processing failed" });
     }
   })
 
-  // GET endpoint (resize image from URL)
+  // GET endpoint: resize image from URL
   .get(async (req, res) => {
     try {
       const imageUrl = req.query.url;
@@ -37,7 +37,7 @@ const handler = nc()
 
       if (!imageUrl) return res.status(400).send("Please provide an image URL as ?url=");
 
-      // dynamic import for node-fetch
+      // Dynamic import fixes the ESM issue
       const fetch = (await import("node-fetch")).default;
       const response = await fetch(imageUrl);
       const arrayBuffer = await response.arrayBuffer();
