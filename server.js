@@ -4,12 +4,10 @@ import sharp from "sharp";
 import cors from "cors";
 
 const app = express();
-app.use(cors()); // Allow frontend requests
+app.use(cors());
 
-// Setup Multer to store uploaded images in memory
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Resize endpoint
 app.post("/resize", upload.single("image"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).send("No image uploaded");

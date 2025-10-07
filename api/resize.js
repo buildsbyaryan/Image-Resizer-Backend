@@ -1,12 +1,11 @@
 import multer from "multer";
 import sharp from "sharp";
 import nc from "next-connect";
-import fetch from "node-fetch"; // For fetching images from URL
+import fetch from "node-fetch"; // dynamic import may be needed if node-fetch v3
 
 const upload = multer({ storage: multer.memoryStorage() });
 
 const handler = nc()
-  // POST endpoint (file upload)
   .use(upload.single("image"))
   .post(async (req, res) => {
     try {
@@ -23,12 +22,10 @@ const handler = nc()
       const base64Image = buffer.toString("base64");
       res.status(200).json({ success: true, image: `data:image/png;base64,${base64Image}` });
     } catch (err) {
-      console.error("Resize error:", err);
+      console.error(err);
       res.status(500).json({ success: false, error: "Image processing failed" });
     }
   })
-
-  // GET endpoint (URL query)
   .get(async (req, res) => {
     try {
       const imageUrl = req.query.url;
@@ -38,9 +35,8 @@ const handler = nc()
       if (!imageUrl) return res.status(400).send("Please provide an image URL as ?url=");
 
       const response = await fetch(imageUrl);
-      const buffer = await response.buffer();
-
-      const resizedBuffer = await sharp(buffer)
+      const buffer = await response.arrayBuffer(); // use arrayBuffer for ESM
+      const resizedBuffer = await sharp(Buffer.from(buffer))
         .resize(width, height)
         .png()
         .toBuffer();
@@ -48,7 +44,7 @@ const handler = nc()
       res.setHeader("Content-Type", "image/png");
       res.send(resizedBuffer);
     } catch (err) {
-      console.error("GET Resize error:", err);
+      console.error(err);
       res.status(500).send("Error processing image");
     }
   });
