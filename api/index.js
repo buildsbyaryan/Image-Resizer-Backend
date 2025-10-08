@@ -9,14 +9,16 @@ app.use(express.json());
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+app.get('/', (req, res) => {
+  res.send('Hello World')
+})
+
 app.post("/resize", upload.single("image"), async (req, res) => {
   const { width, height } = req.body;
-
   try {
     const buffer = await sharp(req.file.buffer)
       .resize(parseInt(width), parseInt(height))
       .toBuffer();
-
     const base64 = buffer.toString("base64");
     res.json({ image: `data:image/png;base64,${base64}` });
   } catch (e) {
