@@ -1,33 +1,49 @@
-import express from "express";
 import multer from "multer";
 import sharp from "sharp";
-import cors from "cors";
+import fs from "fs";
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+const upload = multer({ dest: "/tmp" });
 
-const upload = multer({ storage: multer.memoryStorage() });
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
-app.get('/', (req, res) => {
-  res.send('Hello World')
-})
-
-app.post("/resize", upload.single("image"), async (req, res) => {
-  const { width, height } = req.body;
-  try {
-    const buffer = await sharp(req.file.buffer)
-      .resize(parseInt(width), parseInt(height))
-      .toBuffer();
-    const base64 = buffer.toString("base64");
-    res.json({ image: `data:image/png;base64,${base64}` });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).send("Method Not Allowed");
   }
-});
 
-const PORT = process.env.PORT || 5000;
+  // Use upload.any() to parse file + fields
+  upload.any()(req, res, async (err) => {
+    if (err) return res.status(500).send(err.message);
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+    try {
+      const file = req.files.find(f => f.fieldname === "image");
+      if (!file) return res.status(400).json({ success: false, message: "No file uploaded" });
+
+      // width & height come as strings in req.body
+      const width = parseInt(req.body.width) || 300;
+      const height = parseInt(req.body.height) || 300;
+
+      const outputPath = `/tmp/resized-${file.originalname}`;
+
+      await sharp(file.path)
+        .resize(width, height)
+        .toFile(outputPath);
+
+      const imageBuffer = fs.readFileSync(outputPath);
+      const base64Image = `data:image/jpeg;base64,${imageBuffer.toString("base64")}`;
+
+      res.status(200).json({ success: true, image: base64Image });
+
+      // cleanup
+      fs.unlinkSync(file.path);
+      fs.unlinkSync(outputPath);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ success: false, message: "Image processing failed" });
+    }
+  });
+}
