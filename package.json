@@ -1,18 +1,18 @@
 {
   "name": "image-resizer-backend",
   "version": "1.0.0",
-  "type": "module",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "dev": "vercel dev",
-    "start": "vercel dev",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["image", "resizer", "api", "sharp", "multer", "vercel"],
-  "author": "Aryan Sharma",
-  "license": "MIT",
-  "description": "Serverless image resizing backend powered by Sharp, Multer, and Next-Connect",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
   "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "multer": "^2.0.2",
     "next-connect": "^1.0.0",
     "node-fetch": "^3.3.2",
