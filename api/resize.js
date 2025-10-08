@@ -23,13 +23,16 @@ export default async function handler(req, res) {
     const outputPath = `/tmp/resized-${req.file.originalname}`;
 
     try {
+      // Resize the image
       await sharp(filePath)
-        .resize(300, 300)
+        .resize(parseInt(req.body.width), parseInt(req.body.height))
         .toFile(outputPath);
 
+      // Convert to base64 so frontend can use it directly
       const imageBuffer = fs.readFileSync(outputPath);
-      res.setHeader("Content-Type", "image/jpeg");
-      res.send(imageBuffer);
+      const base64Image = `data:image/jpeg;base64,${imageBuffer.toString("base64")}`;
+
+      res.status(200).json({ success: true, image: base64Image });
     } catch (error) {
       res.status(500).send(error.message);
     } finally {
