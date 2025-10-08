@@ -1,45 +1,37 @@
-import { IncomingMessage, ServerResponse } from 'http';
-import sharp from 'sharp';
-import multer from 'multer';
-import Cors from 'cors';
-
-const cors = Cors({ origin: true });
-const upload = multer({ storage: multer.memoryStorage() });
+import multer from "multer";
+import sharp from "sharp";
+import fs from "fs";
 
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: false, // we use multer
   },
 };
 
-export default async function handler(req = IncomingMessage, res = ServerResponse) {
-  await runMiddleware(req, res, cors);
+const upload = multer({ dest: "/tmp" }); // temporary folder in serverless
 
-  if (req.method === 'POST') {
-    upload.single('image')(req, res, async function (err) {
+export default async function handler(req, res) {
+  if (req.method === "POST") {
+    upload.single("image")(req, res, async (err) => {
       if (err) return res.status(500).json({ error: err.message });
 
-      const { width, height } = req.body;
-      try {
-        const buffer = await sharp(req.file.buffer)
-          .resize(parseInt(width), parseInt(height))
-          .toBuffer();
-        const base64 = buffer.toString('base64');
-        res.status(200).json({ image: `data:image/png;base64,${base64}` });
-      } catch (e) {
-        res.status(500).json({ error: e.message });
-      }
+      const filePath = req.file.path;
+      const outputPath = `/tmp/resized-${req.file.originalname}`;
+
+      await sharp(filePath)
+        .resize(300, 300)
+        .toFile(outputPath);
+
+      const imageBuffer = fs.readFileSync(outputPath);
+
+      res.setHeader("Content-Type", "image/jpeg");
+      res.send(imageBuffer);
+
+      // clean up
+      fs.unlinkSync(filePath);
+      fs.unlinkSync(outputPath);
     });
   } else {
-    res.status(405).json({ message: 'Method Not Allowed' });
+    res.status(405).send("Method Not Allowed");
   }
-}
-
-function runMiddleware(req, res, fn) {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result) => {
-      if (result instanceof Error) return reject(result);
-      return resolve(result);
-    });
-  });
 }
