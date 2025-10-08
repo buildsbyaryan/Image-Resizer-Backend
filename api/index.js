@@ -4,6 +4,8 @@ import sharp from "sharp";
 import fs from "fs";
 import cors from "cors";
 
+//Backend is live now !!!!
+
 const app = express();
 app.use(cors()); // allow all origins
 
