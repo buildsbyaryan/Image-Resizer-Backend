@@ -2,27 +2,20 @@ import express from "express";
 import multer from "multer";
 import sharp from "sharp";
 import fs from "fs";
-import cors from "cors"; // <-- import cors
+import cors from "cors";
 
 const app = express();
-app.use(cors()); // <-- allow all origins
+app.use(cors()); // allow all origins
+
 const upload = multer({ dest: "/tmp" });
 
-// Disable body parser for Next.js API (if using Vercel)
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
-app.post("/resize", upload.any(), async (req, res) => {
+app.post("/resize", upload.single("image"), async (req, res) => {
   try {
-    const file = req.files.find(f => f.fieldname === "image");
+    const file = req.file;
     if (!file) return res.status(400).json({ success: false, message: "No file uploaded" });
 
     const width = parseInt(req.body.width) || 300;
     const height = parseInt(req.body.height) || 300;
-
     const outputPath = `/tmp/resized-${file.originalname}`;
 
     await sharp(file.path)
@@ -42,6 +35,6 @@ app.post("/resize", upload.any(), async (req, res) => {
   }
 });
 
-// Start server (for Render or local)
+// Listen on Render/Vercel port
 const port = process.env.PORT || 5000;
 app.listen(port, () => console.log(`Server running on port ${port}`));
