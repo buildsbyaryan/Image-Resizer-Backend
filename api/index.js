@@ -11,6 +11,10 @@ app.use(cors()); // allow all origins
 
 const upload = multer({ dest: "/tmp" });
 
+app.get('/', (req, res) => {
+  res.send('Hello World')
+})
+
 app.post("/resize", upload.single("image"), async (req, res) => {
   try {
     const file = req.file;
